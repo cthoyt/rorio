@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 from pathlib import Path
 
 import bioregistry
@@ -16,7 +17,7 @@ from funowl import (
     Ontology,
     OntologyDocument,
 )
-from rdflib import DC, DCTERMS, OWL, RDFS, Literal, Namespace, URIRef
+from rdflib import DCTERMS, OWL, RDFS, Literal, Namespace, URIRef
 from tqdm.auto import tqdm
 
 # Paths and URLs
@@ -61,7 +62,7 @@ NAME_REMAPPING = {
     "Hematology\\Oncology Clinic": "Hematology/Oncology Clinic",
 }
 
-# TODO handle prefxies HESA, UCAS, UKPRN, CNRS, and OrgRef
+# TODO handle prefixes HESA, UCAS, UKPRN, CNRS, and OrgRef
 # OrgRef refers to wikipedia page id, see
 # https://stackoverflow.com/questions/6168020/what-is-wikipedia-pageid-how-to-change-it-into-real-page-url
 
@@ -80,14 +81,14 @@ def main():
     ontology = Ontology(iri=URIRef(ONTOLOGY_URI))
     ontology.annotations.extend(
         (
-            Annotation(DC.title, "ROR in OWL"),
-            Annotation(DC.creator, CHARLIE),
+            Annotation(DCTERMS.title, "ROR in OWL"),
+            Annotation(DCTERMS.creator, CHARLIE),
             Annotation(
                 DCTERMS.license, "https://creativecommons.org/publicdomain/zero/1.0/"
             ),
             Annotation(RDFS.seeAlso, "https://github.com/cthoyt/rorio"),
             Annotation(OWL.versionInfo, today),
-            Annotation(DC.source, DATA_URL),
+            Annotation(DCTERMS.source, DATA_URL),
         )
     )
 
@@ -193,6 +194,7 @@ def main():
         for acronym in record.get("acronyms", []):
             try:
                 # TODO add synonym type annotation?
+                # See https://github.com/information-artifact-ontology/ontology-metadata/pull/124
                 ontology.annotations.append(
                     AnnotationAssertion(
                         OIO["hasExactSynonym"], organization_uri_ref, Literal(acronym)
@@ -234,18 +236,15 @@ def main():
 
     doc = OntologyDocument(
         ontology=ontology,
-        dc=DC,
         orcid=ORCID,
-        # obo=OBO,
+        obo=OBO,
         ror=ROR,
-        dcterms=DCTERMS,
-        owl=OWL,
+        dcterms=DCTERMS._NS,
+        owl=OWL._NS,
         geonames=GEONAMES,
         oio=OIO,
         BFO=BFO,
         RO=RO,
-        OBI=OBI,
-        ENVO=ENVO,
     )
     click.echo(f"writing to {OFN_PATH}")
     OFN_PATH.write_text(f"{doc}\n")
