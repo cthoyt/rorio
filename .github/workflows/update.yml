@@ -1,0 +1,30 @@
+name: Update ROR Instance Ontology
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0"  # weekly
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    container: obolibrary/odkfull:v1.3.1
+    strategy:
+      max-parallel: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Update Git Configuration
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Build
+        run: python build.py
+
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: '🦁 Update rorio'
+          default_author: github_actions
