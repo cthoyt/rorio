@@ -4,6 +4,8 @@ Similar to the [ORCIDIO](https://github.com/cthoyt/orcidio), which makes an onto
 ORCID, this repository houses a script to convert the [Research Organization Registry (ROR)](https://ror.org) into
 an ontology of instances of organizations.
 
+The latest version can be downloaded at https://w3id.org/rorio/rorio.owl. 
+
 ## Build
 
 Install the requirements and run `python build.py`
