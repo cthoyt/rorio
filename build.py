@@ -23,6 +23,7 @@ from tqdm.auto import tqdm
 # Paths and URLs
 HERE = Path(__file__).parent.resolve()
 OFN_PATH = HERE.joinpath("rorio.ofn")
+OWL_PATH = HERE.joinpath("rorio.ow,")
 DATA_URL = (
     "https://zenodo.org/record/7448410/files/v1.17.1-2022-12-16-ror-data.zip?download=1"
 )
@@ -248,6 +249,10 @@ def main():
     )
     click.echo(f"writing to {OFN_PATH}")
     OFN_PATH.write_text(f"{doc}\n")
+
+    cmd = f"robot convert --input {OFN_PATH} --output {OWL_PATH}"
+    click.secho(cmd, fg="green")
+    os.system(cmd)
 
 
 if __name__ == "__main__":
