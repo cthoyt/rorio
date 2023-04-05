@@ -59,10 +59,6 @@ NAME_REMAPPING = {
     "Hematology\\Oncology Clinic": "Hematology/Oncology Clinic",
 }
 
-# TODO handle prefixes HESA, UCAS, UKPRN, CNRS, and OrgRef
-# OrgRef refers to wikipedia page id, see
-# https://stackoverflow.com/questions/6168020/what-is-wikipedia-pageid-how-to-change-it-into-real-page-url
-
 ONTOLOGY_URI = "https://w3id.org/rorio/rorio.owl"
 
 #: Zenodo ID for ROR
@@ -221,6 +217,10 @@ def main():
                 continue
 
         for prefix, xref_data in record.get("external_ids", {}).items():
+            if prefix == "OrgRef":
+                # OrgRef refers to wikipedia page id, see
+                # https://stackoverflow.com/questions/6168020/what-is-wikipedia-pageid-how-to-change-it-into-real-page-url
+                continue
             norm_prefix = bioregistry.normalize_prefix(prefix)
             if norm_prefix is None:
                 if prefix not in unhandled_xref_prefixes:
