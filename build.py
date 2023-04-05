@@ -263,6 +263,11 @@ def main():
     click.echo(f"writing to {OFN_PATH}")
     OFN_PATH.write_text(f"{doc}\n")
 
+    cmd = f"robot convert --input {OFN_PATH} --output {OFN_PATH}"
+    click.secho("Canonicalizing OFN")
+    click.secho(cmd, fg="green")
+    os.system(cmd)
+
     cmd = f"robot convert --input {OFN_PATH} --output {OWL_PATH}"
     click.secho(cmd, fg="green")
     os.system(cmd)
