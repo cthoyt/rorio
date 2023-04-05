@@ -1,11 +1,11 @@
-import datetime
 import json
 import os
+import zipfile
 from pathlib import Path
 
 import bioregistry
 import click
-import pystow
+import zenodo_client
 from funowl import (
     Annotation,
     AnnotationAssertion,
@@ -24,10 +24,6 @@ from tqdm.auto import tqdm
 HERE = Path(__file__).parent.resolve()
 OFN_PATH = HERE.joinpath("rorio.ofn")
 OWL_PATH = HERE.joinpath("rorio.ow,")
-DATA_URL = (
-    "https://zenodo.org/record/7448410/files/v1.17.1-2022-12-16-ror-data.zip?download=1"
-)
-DATA_INNER_PATH = "v1.17.1-2022-12-16-ror-data.json"
 
 # Namespaces
 ORCID = Namespace("https://orcid.org/")
@@ -69,14 +65,30 @@ NAME_REMAPPING = {
 
 ONTOLOGY_URI = "https://w3id.org/rorio/rorio.owl"
 
+#: Zenodo ID for ROR
+PERMENANT = "6347574"
+
+
+def get_latest():
+    client = zenodo_client.Zenodo()
+    latest_record_id = client.get_latest_record(PERMENANT)
+    response = client.get_record(latest_record_id)
+    response_json = response.json()
+    version = response_json["metadata"]["version"].lstrip("v")
+    file_record = response_json["files"][0]
+    name = file_record["key"]
+    url = file_record["links"]["self"]
+    path = client.download(latest_record_id, name=name)
+    with zipfile.ZipFile(path) as zf:
+        for zip_info in zf.filelist:
+            if zip_info.filename.endswith(".json"):
+                with zf.open(zip_info) as file:
+                    return version, url, json.load(file)
+    raise FileNotFoundError
+
 
 def main():
-    with pystow.ensure_open_zip(
-        "ror", url=DATA_URL, inner_path=DATA_INNER_PATH
-    ) as file:
-        data = json.load(file)
-
-    today = datetime.date.today().strftime("%Y-%m-%d")
+    version, source_uri, records = get_latest()
     unhandled_xref_prefixes = set()
 
     ontology = Ontology(iri=URIRef(ONTOLOGY_URI))
@@ -88,8 +100,8 @@ def main():
                 DCTERMS.license, "https://creativecommons.org/publicdomain/zero/1.0/"
             ),
             Annotation(RDFS.seeAlso, "https://github.com/cthoyt/rorio"),
-            Annotation(OWL.versionInfo, today),
-            Annotation(DCTERMS.source, DATA_URL),
+            Annotation(OWL.versionInfo, Literal(version)),
+            Annotation(DCTERMS.source, URIRef(source_uri)),
         )
     )
 
@@ -112,7 +124,9 @@ def main():
         ]
     )
 
-    for record in tqdm(data, unit_scale=True, unit="record"):
+    for record in tqdm(
+        records, unit_scale=True, unit="record", desc=f"ROR v{version} to OWL"
+    ):
         organization_uri_ref = URIRef(record["id"])
         organization_name = record["name"]
         organization_name = NAME_REMAPPING.get(organization_name, organization_name)
@@ -125,7 +139,6 @@ def main():
                         RDFS.label,
                         organization_uri_ref,
                         Literal(organization_name),
-                        # [Annotation(DC.source, URL)],
                     ),
                     ClassAssertion(ORG_CLASS, organization_uri_ref),
                 ]
