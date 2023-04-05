@@ -23,7 +23,7 @@ from tqdm.auto import tqdm
 # Paths and URLs
 HERE = Path(__file__).parent.resolve()
 OFN_PATH = HERE.joinpath("rorio.ofn")
-OWL_PATH = HERE.joinpath("rorio.ow,")
+OWL_PATH = HERE.joinpath("rorio.owl")
 
 # Namespaces
 ORCID = Namespace("https://orcid.org/")
