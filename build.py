@@ -263,6 +263,7 @@ def main():
     click.echo(f"writing to {OFN_PATH}")
     OFN_PATH.write_text(f"{doc}\n")
 
+    # TODO add prefix file for conversion to shorten files
     cmd = f"robot convert --input {OFN_PATH} --output {OFN_PATH}"
     click.secho("Canonicalizing OFN")
     click.secho(cmd, fg="green")
