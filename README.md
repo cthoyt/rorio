@@ -6,9 +6,16 @@ an ontology of instances of organizations.
 
 The latest version can be downloaded at https://w3id.org/rorio/rorio.owl. 
 
+![](img/rorio-in-protege.png)
+
 ## Build
 
-Install the requirements and run `python build.py`
+Install the requirements and run with:
+
+```shell
+python -m pip install -r requirements.txt
+python build.py
+```
 
 ## License
 
