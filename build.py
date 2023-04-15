@@ -83,7 +83,9 @@ def get_latest():
     raise FileNotFoundError
 
 
-def main():
+@click.command()
+@click.option("--quiet", is_flag=True)
+def main(quiet: bool):
     version, source_uri, records = get_latest()
     unhandled_xref_prefixes = set()
 
@@ -92,9 +94,7 @@ def main():
         (
             Annotation(DCTERMS.title, "ROR in OWL"),
             Annotation(DCTERMS.creator, CHARLIE),
-            Annotation(
-                DCTERMS.license, "https://creativecommons.org/publicdomain/zero/1.0/"
-            ),
+            Annotation(DCTERMS.license, "https://creativecommons.org/publicdomain/zero/1.0/"),
             Annotation(RDFS.seeAlso, "https://github.com/cthoyt/rorio"),
             Annotation(OWL.versionInfo, Literal(version)),
             Annotation(DCTERMS.source, URIRef(source_uri)),
@@ -121,7 +121,11 @@ def main():
     )
 
     for record in tqdm(
-        records, unit_scale=True, unit="record", desc=f"ROR v{version} to OWL"
+        records,
+        unit_scale=True,
+        unit="record",
+        desc=f"ROR v{version} to OWL",
+        disable=quiet,
     ):
         organization_uri_ref = URIRef(record["id"])
         organization_name = record["name"]
@@ -140,9 +144,7 @@ def main():
                 ]
             )
         except (TypeError, AssertionError):
-            tqdm.write(
-                f"failed on organization: {organization_name} ({organization_uri_ref})"
-            )
+            tqdm.write(f"failed on organization: {organization_name} ({organization_uri_ref})")
             continue
 
         for address in record.get("addresses", []):
@@ -156,9 +158,7 @@ def main():
             try:
                 ontology.annotations.extend(
                     [
-                        ObjectPropertyAssertion(
-                            LOCATED_IN, organization_uri_ref, city_uri_ref
-                        ),
+                        ObjectPropertyAssertion(LOCATED_IN, organization_uri_ref, city_uri_ref),
                         AnnotationAssertion(
                             RDFS.label,
                             city_uri_ref,
@@ -174,9 +174,7 @@ def main():
                     ]
                 )
             except AssertionError:
-                tqdm.write(
-                    f"[{organization_uri_ref}] failed on city: {city_name} ({city_uri_ref})"
-                )
+                tqdm.write(f"[{organization_uri_ref}] failed on city: {city_name} ({city_uri_ref})")
                 continue
 
         for relationship in record.get("relationships", []):
@@ -240,11 +238,7 @@ def main():
                     AnnotationAssertion(
                         OIO["hasDbXref"],
                         organization_uri_ref,
-                        Literal(
-                            bioregistry.curie_to_str(
-                                norm_prefix, xref_id.replace(" ", "")
-                            )
-                        ),
+                        Literal(bioregistry.curie_to_str(norm_prefix, xref_id.replace(" ", ""))),
                     )
                 )
 
