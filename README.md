@@ -8,6 +8,8 @@ The latest version can be downloaded at https://w3id.org/rorio/rorio.owl.
 
 ![](img/rorio-in-protege.png)
 
+In the screenshot, you can see the `part of`, `has part`, and `located in` relations for the example organization. Unfortunately, Protégé does not have support for navigating partonomies on individuals.
+
 ## Build
 
 Install the requirements and run with:
