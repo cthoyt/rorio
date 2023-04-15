@@ -25,6 +25,8 @@ jobs:
 
       - name: Build
         run: python build.py
+        env:
+          ZENODO_API_KEY: ${{ secrets.ZENODO_API_KEY }}
 
       - name: Commit changes
         uses: EndBug/add-and-commit@v9
