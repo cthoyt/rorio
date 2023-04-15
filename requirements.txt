@@ -1,0 +1,6 @@
+bioregistry
+zenodo_client
+click
+funowl
+rdflib
+tqdm
