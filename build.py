@@ -34,6 +34,7 @@ BFO = Namespace("http://purl.obolibrary.org/obo/BFO_")
 ENVO = Namespace("http://purl.obolibrary.org/obo/ENVO_")
 OBI = Namespace("http://purl.obolibrary.org/obo/OBI_")
 RO = Namespace("http://purl.obolibrary.org/obo/RO_")
+OMO = Namespace("http://purl.obolibrary.org/obo/OMO_")
 OIO = Namespace("http://www.geneontology.org/formats/oboInOwl#")
 
 # Constants
@@ -201,11 +202,14 @@ def main(quiet: bool):
 
         for acronym in record.get("acronyms", []):
             try:
-                # TODO add synonym type annotation?
-                # See https://github.com/information-artifact-ontology/ontology-metadata/pull/124
                 ontology.annotations.append(
                     AnnotationAssertion(
-                        OIO["hasExactSynonym"], organization_uri_ref, Literal(acronym)
+                        OIO["hasExactSynonym"],
+                        organization_uri_ref,
+                        Literal(acronym),
+                        [
+                            Annotation(OIO["SynonymType"], OMO["0003000"]),
+                        ],
                     )
                 )
             except (AssertionError, TypeError):
