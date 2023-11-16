@@ -24,6 +24,7 @@ from tqdm.auto import tqdm
 HERE = Path(__file__).parent.resolve()
 OFN_PATH = HERE.joinpath("rorio.ofn")
 OWL_PATH = HERE.joinpath("rorio.owl")
+JSON_PATH = HERE.joinpath("rorio.json")
 
 # Namespaces
 ORCID = Namespace("https://orcid.org/")
@@ -268,6 +269,10 @@ def main(quiet: bool):
     os.system(cmd)
 
     cmd = f"robot convert --input {OFN_PATH} --output {OWL_PATH}"
+    click.secho(cmd, fg="green")
+    os.system(cmd)
+
+    cmd = f"robot convert --input {OFN_PATH} --output {JSON_PATH}"
     click.secho(cmd, fg="green")
     os.system(cmd)
 
