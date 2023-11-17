@@ -29,6 +29,7 @@ OFN_PATH = HERE.joinpath("rorio.ofn")
 OWL_PATH = HERE.joinpath("rorio.owl")
 JSON_PATH = HERE.joinpath("rorio.json")
 GILDA_PATH = HERE.joinpath("rorio.gilda.tsv.gz")
+ROR_TO_COUNTRIES = HERE.joinpath("countries.json")
 
 # Namespaces
 ORCID = Namespace("https://orcid.org/")
@@ -142,6 +143,7 @@ def main(quiet: bool):
             )
         )
 
+    ror_to_country = {}
     for record in tqdm(
         records,
         unit_scale=True,
@@ -175,6 +177,9 @@ def main(quiet: bool):
             city = address.get("geonames_city")
             if not city:
                 continue
+            # If there is an organization with multiple countries, this will squash
+            # all but one. It's a reasonable simplficiation, though
+            ror_to_country[organization_luid] = str(address["country_geonames_id"])
             city_uri_ref = GEONAMES[str(city["id"])]
             city_name = city["city"]
             city_name = NAME_REMAPPING.get(city_name, city_name)
@@ -271,6 +276,8 @@ def main(quiet: bool):
                         Literal(bioregistry.curie_to_str(norm_prefix, xref_id.replace(" ", ""))),
                     )
                 )
+
+    ROR_TO_COUNTRIES.write_text(json.dumps(ror_to_country, indent=2))
 
     doc = OntologyDocument(
         ontology=ontology,
