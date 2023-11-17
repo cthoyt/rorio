@@ -18,13 +18,17 @@ from funowl import (
     OntologyDocument,
 )
 from rdflib import DCTERMS, OWL, RDFS, Literal, Namespace, URIRef
-from tqdm.auto import tqdm
+from tqdm import tqdm
+from gilda import Term
+from gilda.term import dump_terms
+from gilda.process import normalize
 
 # Paths and URLs
 HERE = Path(__file__).parent.resolve()
 OFN_PATH = HERE.joinpath("rorio.ofn")
 OWL_PATH = HERE.joinpath("rorio.owl")
 JSON_PATH = HERE.joinpath("rorio.json")
+GILDA_PATH = HERE.joinpath("rorio.gilda.tsv.gz")
 
 # Namespaces
 ORCID = Namespace("https://orcid.org/")
@@ -57,6 +61,7 @@ RMAP = {
 NAME_REMAPPING = {
     "'s-Hertogenbosch": "Den Bosch",  # SMH Netherlands, why u gotta be like this
     "'s Heeren Loo": "s Heeren Loo",
+    "'s-Heerenberg": "s-Heerenberg",
     "Institut Virion\\Serion": "Institut Virion/Serion",
     "Hematology\\Oncology Clinic": "Hematology/Oncology Clinic",
 }
@@ -64,7 +69,7 @@ NAME_REMAPPING = {
 ONTOLOGY_URI = "https://w3id.org/rorio/rorio.owl"
 
 #: Zenodo ID for ROR
-PERMENANT = "6347574"
+PERMENANT = "10086202"
 
 
 def get_latest():
@@ -122,6 +127,21 @@ def main(quiet: bool):
         ]
     )
 
+    terms: list[Term] = []
+
+    def _add_term(t, luid, entry_name, status):
+        terms.append(
+            Term(
+                norm_text=normalize(t),
+                text=t,
+                db="ror",
+                id=luid,
+                entry_name=entry_name,
+                status=status,
+                source="ror",
+            )
+        )
+
     for record in tqdm(
         records,
         unit_scale=True,
@@ -130,6 +150,7 @@ def main(quiet: bool):
         disable=quiet,
     ):
         organization_uri_ref = URIRef(record["id"])
+        organization_luid = record["id"].removeprefix("https://ror.org/")
         organization_name = record["name"]
         organization_name = NAME_REMAPPING.get(organization_name, organization_name)
 
@@ -148,6 +169,7 @@ def main(quiet: bool):
         except (TypeError, AssertionError):
             tqdm.write(f"failed on organization: {organization_name} ({organization_uri_ref})")
             continue
+        _add_term(organization_name, organization_luid, organization_name, "name")
 
         for address in record.get("addresses", []):
             city = address.get("geonames_city")
@@ -200,6 +222,7 @@ def main(quiet: bool):
                     f"bad synonym for {organization_name} ({organization_uri_ref}): {synonym}"
                 )
                 continue
+            _add_term(synonym, organization_luid, organization_name, "synonym")
 
         for acronym in record.get("acronyms", []):
             try:
@@ -218,6 +241,7 @@ def main(quiet: bool):
                     f"bad acronym for {organization_name} ({organization_uri_ref}): {acronym}"
                 )
                 continue
+            _add_term(acronym, organization_luid, organization_name, "synonym")
 
         for prefix, xref_data in record.get("external_ids", {}).items():
             if prefix == "OrgRef":
@@ -275,6 +299,9 @@ def main(quiet: bool):
     cmd = f"robot convert --input {OFN_PATH} --output {JSON_PATH}"
     click.secho(cmd, fg="green")
     os.system(cmd)
+
+    click.secho(f"writing Gilda index to {GILDA_PATH}", fg="green")
+    dump_terms(terms, GILDA_PATH)
 
 
 if __name__ == "__main__":
