@@ -241,7 +241,8 @@ def main(quiet: bool):
                     f"bad acronym for {organization_name} ({organization_uri_ref}): {acronym}"
                 )
                 continue
-            _add_term(acronym, organization_luid, organization_name, "synonym")
+            # Acronyms cause collisions with country and city acronyms, skip for now
+            # _add_term(acronym, organization_luid, organization_name, "synonym")
 
         for prefix, xref_data in record.get("external_ids", {}).items():
             if prefix == "OrgRef":
