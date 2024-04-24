@@ -2,6 +2,7 @@ import json
 import os
 import zipfile
 from pathlib import Path
+from typing import Any, Dict, List, Tuple, TypeVar
 
 import bioregistry
 import click
@@ -17,11 +18,11 @@ from funowl import (
     Ontology,
     OntologyDocument,
 )
+from gilda import Term
+from gilda.process import normalize
+from gilda.term import dump_terms
 from rdflib import DCTERMS, OWL, RDFS, Literal, Namespace, URIRef
 from tqdm import tqdm
-from gilda import Term
-from gilda.term import dump_terms
-from gilda.process import normalize
 
 # Paths and URLs
 HERE = Path(__file__).parent.resolve()
@@ -72,8 +73,11 @@ ONTOLOGY_URI = "https://w3id.org/rorio/rorio.owl"
 #: Zenodo ID for ROR
 PERMENANT = "10086202"
 
+Record = TypeVar("Record", bound=Dict[str, Any])
 
-def get_latest():
+
+def get_latest() -> Tuple[str, str, List[Record]]:
+    """Get the latest ROR metadata and records."""
     client = zenodo_client.Zenodo()
     latest_record_id = client.get_latest_record(PERMENANT)
     response = client.get_record(latest_record_id)
@@ -102,7 +106,9 @@ def main(quiet: bool):
         (
             Annotation(DCTERMS.title, "ROR in OWL"),
             Annotation(DCTERMS.creator, CHARLIE),
-            Annotation(DCTERMS.license, "https://creativecommons.org/publicdomain/zero/1.0/"),
+            Annotation(
+                DCTERMS.license, "https://creativecommons.org/publicdomain/zero/1.0/"
+            ),
             Annotation(RDFS.seeAlso, "https://github.com/cthoyt/rorio"),
             Annotation(OWL.versionInfo, Literal(version)),
             Annotation(DCTERMS.source, URIRef(source_uri)),
@@ -110,6 +116,7 @@ def main(quiet: bool):
     )
 
     ontology.declarations(
+        Class(OWL.DeprecatedClass),
         Class(CITY_CLASS),
         Class(ORG_CLASS),
         ObjectProperty(LOCATED_IN),
@@ -157,6 +164,30 @@ def main(quiet: bool):
         organization_name = NAME_REMAPPING.get(organization_name, organization_name)
 
         ontology.declarations(NamedIndividual(organization_uri_ref))
+
+        # Start by adding relations, since this might include successor relations
+        ontology.annotations.extend(
+            AnnotationAssertion(
+                RMAP[relationship["type"]],
+                organization_uri_ref,
+                URIRef(relationship["id"]),
+            )
+            for relationship in record.get("relationships", [])
+        )
+
+        if record.get("status") != "active":
+            ontology.annotations.extend(
+                [
+                    AnnotationAssertion(
+                        RDFS.label,
+                        organization_uri_ref,
+                        Literal(organization_name + " (Obsolete)"),
+                    ),
+                    ClassAssertion(ORG_CLASS, OWL.DeprecatedClass),
+                ]
+            )
+            continue
+
         try:
             ontology.annotations.extend(
                 [
@@ -169,7 +200,9 @@ def main(quiet: bool):
                 ]
             )
         except (TypeError, AssertionError):
-            tqdm.write(f"failed on organization: {organization_name} ({organization_uri_ref})")
+            tqdm.write(
+                f"failed on organization: {organization_name} ({organization_uri_ref})"
+            )
             continue
         _add_term(organization_name, organization_luid, organization_name, "name")
 
@@ -178,7 +211,7 @@ def main(quiet: bool):
             if not city:
                 continue
             # If there is an organization with multiple countries, this will squash
-            # all but one. It's a reasonable simplficiation, though
+            # all but one. It's a reasonable simplification, though
             ror_to_country[organization_luid] = str(address["country_geonames_id"])
             city_uri_ref = GEONAMES[str(city["id"])]
             city_name = city["city"]
@@ -187,7 +220,9 @@ def main(quiet: bool):
             try:
                 ontology.annotations.extend(
                     [
-                        ObjectPropertyAssertion(LOCATED_IN, organization_uri_ref, city_uri_ref),
+                        ObjectPropertyAssertion(
+                            LOCATED_IN, organization_uri_ref, city_uri_ref
+                        ),
                         AnnotationAssertion(
                             RDFS.label,
                             city_uri_ref,
@@ -203,17 +238,10 @@ def main(quiet: bool):
                     ]
                 )
             except AssertionError:
-                tqdm.write(f"[{organization_uri_ref}] failed on city: {city_name} ({city_uri_ref})")
-                continue
-
-        for relationship in record.get("relationships", []):
-            ontology.annotations.append(
-                AnnotationAssertion(
-                    RMAP[relationship["type"]],
-                    organization_uri_ref,
-                    URIRef(relationship["id"]),
+                tqdm.write(
+                    f"[{organization_uri_ref}] failed on city: {city_name} ({city_uri_ref})"
                 )
-            )
+                continue
 
         for synonym in record.get("aliases", []):
             try:
@@ -273,7 +301,11 @@ def main(quiet: bool):
                     AnnotationAssertion(
                         OIO["hasDbXref"],
                         organization_uri_ref,
-                        Literal(bioregistry.curie_to_str(norm_prefix, xref_id.replace(" ", ""))),
+                        Literal(
+                            bioregistry.curie_to_str(
+                                norm_prefix, xref_id.replace(" ", "")
+                            )
+                        ),
                     )
                 )
 
@@ -287,7 +319,7 @@ def main(quiet: bool):
         dcterms=DCTERMS._NS,
         owl=OWL._NS,
         geonames=GEONAMES,
-        oio=OIO,
+        oboInOwl=OIO,
         BFO=BFO,
         RO=RO,
     )
